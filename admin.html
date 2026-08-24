@@ -504,6 +504,16 @@ async function renderCourse(){
       </div>
     </div>
 
+    <div class="card">
+      <label class="field-label">Копіювати цей курс в інший відділ</label>
+      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Скопіює курс разом з усіма кроками, блоками вмісту і завданнями — не треба вносити все заново.</p>
+      <select id="copyTargetDept">
+        ${state.departments.filter(d => d.id !== state.departmentId).map(d => `<option value="${d.id}">${d.title}</option>`).join('')}
+      </select>
+      <button class="btn small" onclick="copyCourseToDepartment()" ${state.departments.length < 2 ? 'disabled' : ''}>Копіювати курс</button>
+      <div class="upload-status" id="copyStatus"></div>
+    </div>
+
     <h2 class="section-title">Воронка навчання</h2>
     <p style="color:var(--ink-soft);font-size:13px;margin-top:-6px;">Клікни на крок, щоб додати вміст у потрібному порядку</p>
     <div class="funnel">`;
@@ -561,6 +571,69 @@ async function uploadCourseCover(inputEl){
   await sb.from('courses').update({ cover_image: pub.publicUrl }).eq('id', state.courseId);
   toast('Постер додано');
   renderCourse();
+}
+
+async function copyCourseToDepartment(){
+  const targetDeptId = document.getElementById('copyTargetDept').value;
+  if (!targetDeptId) return toast('Немає відділів для копіювання');
+  const statusEl = document.getElementById('copyStatus');
+  statusEl.textContent = 'Копіювання...';
+
+  const course = state.courses.find(c => c.id === state.courseId);
+
+  try {
+    // 1. Копія самого курсу
+    const { data: newCourseArr, error: courseErr } = await sb.from('courses').insert({
+      title: course.title,
+      description: course.description,
+      cover_image: course.cover_image,
+      order_index: 999,
+      is_active: true,
+      department_id: targetDeptId
+    }).select();
+    if (courseErr) throw courseErr;
+    const newCourse = newCourseArr[0];
+
+    // 2. Копія всіх кроків курсу
+    const { data: lessons, error: lessonsErr } = await sb.from('lessons').select('*').eq('course_id', state.courseId).order('order_index');
+    if (lessonsErr) throw lessonsErr;
+
+    for (const lesson of (lessons || [])){
+      const { data: newLessonArr, error: lessonErr } = await sb.from('lessons').insert({
+        course_id: newCourse.id,
+        title: lesson.title,
+        order_index: lesson.order_index,
+        description: lesson.description,
+        transcript_text: lesson.transcript_text,
+        video_url: lesson.video_url,
+        audio_url: lesson.audio_url,
+        images: lesson.images,
+        content_blocks: lesson.content_blocks
+      }).select();
+      if (lessonErr) throw lessonErr;
+      const newLesson = newLessonArr[0];
+
+      // 3. Копія завдань цього кроку
+      const { data: tasks, error: tasksErr } = await sb.from('lesson_tasks').select('*').eq('lesson_id', lesson.id).order('order_index');
+      if (tasksErr) throw tasksErr;
+      if (tasks && tasks.length){
+        const newTasks = tasks.map(t => ({
+          lesson_id: newLesson.id,
+          task_type: t.task_type,
+          task_text: t.task_text,
+          order_index: t.order_index
+        }));
+        const { error: insertTasksErr } = await sb.from('lesson_tasks').insert(newTasks);
+        if (insertTasksErr) throw insertTasksErr;
+      }
+    }
+
+    statusEl.textContent = 'Скопійовано ✓';
+    toast('Курс скопійовано в інший відділ');
+  } catch (ex){
+    statusEl.textContent = 'Помилка: ' + ex.message;
+    console.error(ex);
+  }
 }
 
 async function saveCourse(){
