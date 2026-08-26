@@ -161,6 +161,8 @@
     font-size:14px; white-space:pre-wrap; word-wrap:break-word; background:var(--panel);
   }
   .rte-editable:focus{outline:2px solid var(--teal); outline-offset:-1px;}
+  .rte-editable ul, .rte-editable ol{padding-left:24px; margin:8px 0;}
+  .rte-editable li{margin-bottom:4px;}
   .emoji-panel{
     display:none; flex-wrap:wrap; gap:4px; padding:8px; border:1px solid var(--line);
     border-radius:8px; margin-bottom:8px; max-width:100%;
@@ -836,6 +838,8 @@ function renderBlocks(){
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'bold')"><b>Ж</b></button>
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'italic')"><i>К</i></button>
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'underline')"><u>П</u></button>
+          <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'insertUnorderedList')" title="Маркований список">☰•</button>
+          <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'insertOrderedList')" title="Нумерований список">☰1.</button>
           <button type="button" class="btn ghost rte-btn" onclick="toggleEmojiPanel(${idx})">😊</button>
         </div>
         <div class="emoji-panel" id="emojiPanel_${idx}" style="display:none;">
