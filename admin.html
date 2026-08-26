@@ -829,6 +829,10 @@ function renderBlocks(){
             <option value="'Courier New', monospace">Courier New</option>
             <option value="'Comic Sans MS', cursive">Comic Sans</option>
           </select>
+          <select onmousedown="saveSelection(${idx})" onchange="applyFontSize(${idx}, this.value)">
+            <option value="">Розмір</option>
+            ${[8,9,10,11,12,14,16,18,20,24,28,32,36].map(s => `<option value="${s}">${s}</option>`).join('')}
+          </select>
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'bold')"><b>Ж</b></button>
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'italic')"><i>К</i></button>
           <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'underline')"><u>П</u></button>
@@ -923,6 +927,21 @@ function rteCmd(idx, cmd){
   document.execCommand(cmd, false, null);
   updateBlockField(idx, 'text', editable.innerHTML);
 }
+function applyFontSize(idx, size){
+  if (!size) return;
+  const editable = document.getElementById('rteText_'+idx);
+  editable.focus();
+  restoreSelection(idx);
+  // execCommand fontSize приймає лише шкалу 1-7, тому ставимо тимчасовий розмір 7,
+  // а потім замінюємо на точний розмір у пунктах через style
+  document.execCommand('fontSize', false, '7');
+  editable.querySelectorAll('font[size="7"]').forEach(f => {
+    f.removeAttribute('size');
+    f.style.fontSize = size + 'pt';
+  });
+  updateBlockField(idx, 'text', editable.innerHTML);
+}
+
 function applyFontFamily(idx, font){
   if (!font) return;
   const editable = document.getElementById('rteText_'+idx);
