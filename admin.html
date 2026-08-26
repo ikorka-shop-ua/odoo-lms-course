@@ -149,6 +149,27 @@
   .add-block-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
   .add-block-row button{flex:1; min-width:100px;}
 
+  .rte-toolbar{
+    display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;
+  }
+  .rte-toolbar select{
+    width:auto; margin-bottom:0; padding:6px 8px; font-size:12px;
+  }
+  .rte-btn{padding:6px 10px; font-size:13px; min-width:30px;}
+  .rte-editable{
+    width:100%; min-height:100px; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
+    font-size:14px; white-space:pre-wrap; word-wrap:break-word; background:var(--panel);
+  }
+  .rte-editable:focus{outline:2px solid var(--teal); outline-offset:-1px;}
+  .emoji-panel{
+    display:none; flex-wrap:wrap; gap:4px; padding:8px; border:1px solid var(--line);
+    border-radius:8px; margin-bottom:8px; max-width:100%;
+  }
+  .emoji-panel button{
+    background:none; border:none; font-size:18px; cursor:pointer; padding:4px; border-radius:4px;
+  }
+  .emoji-panel button:hover{background:var(--bg);}
+
   body::before{
     content:'';
     position:fixed;
@@ -797,7 +818,30 @@ function renderBlocks(){
       </div>`;
 
     if (b.type === 'text'){
-      html += `<textarea onchange="updateBlockField(${idx},'text',this.value)">${b.text||''}</textarea>`;
+      html += `
+        <div class="rte-toolbar">
+          <select onmousedown="saveSelection(${idx})" onchange="applyFontFamily(${idx}, this.value)">
+            <option value="">Шрифт за замовчуванням</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+          </select>
+          <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'bold')"><b>Ж</b></button>
+          <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'italic')"><i>К</i></button>
+          <button type="button" class="btn ghost rte-btn" onmousedown="event.preventDefault(); rteCmd(${idx},'underline')"><u>П</u></button>
+          <button type="button" class="btn ghost rte-btn" onclick="toggleEmojiPanel(${idx})">😊</button>
+        </div>
+        <div class="emoji-panel" id="emojiPanel_${idx}" style="display:none;">
+          ${['😀','😃','😄','😁','😊','🙂','😉','😍','🤩','😎','🥳','👍','👏','🙌','💪','🔥','⭐','✅','❌','⚠️','💡','📌','📝','🎯','🐟','🐠','🦐','🍣','📦','🚚','💰','💳','📞','⏰','🎉'].map(e =>
+            `<button type="button" onclick="insertEmoji(${idx},'${e}')">${e}</button>`
+          ).join('')}
+        </div>
+        <div class="rte-editable" id="rteText_${idx}" contenteditable="true"
+          onmouseup="saveSelection(${idx})" onkeyup="saveSelection(${idx})"
+          oninput="updateBlockField(${idx},'text',this.innerHTML)">${b.text||''}</div>`;
     }
     if (b.type === 'video'){
       if (b.url){
@@ -851,6 +895,57 @@ function moveBlock(idx, dir){
   state.blocks[newIdx] = tmp;
   renderBlocks();
 }
+// --- Rich text: шрифт, форматування, емодзі ---
+let rteSelections = {};
+
+function saveSelection(idx){
+  const sel = window.getSelection();
+  if (sel.rangeCount > 0){
+    const range = sel.getRangeAt(0);
+    const editable = document.getElementById('rteText_'+idx);
+    if (editable && editable.contains(range.commonAncestorContainer)){
+      rteSelections[idx] = range.cloneRange();
+    }
+  }
+}
+function restoreSelection(idx){
+  const range = rteSelections[idx];
+  if (range){
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+}
+function rteCmd(idx, cmd){
+  const editable = document.getElementById('rteText_'+idx);
+  editable.focus();
+  restoreSelection(idx);
+  document.execCommand(cmd, false, null);
+  updateBlockField(idx, 'text', editable.innerHTML);
+}
+function applyFontFamily(idx, font){
+  if (!font) return;
+  const editable = document.getElementById('rteText_'+idx);
+  editable.focus();
+  restoreSelection(idx);
+  document.execCommand('fontName', false, font);
+  updateBlockField(idx, 'text', editable.innerHTML);
+}
+function toggleEmojiPanel(idx){
+  const panel = document.getElementById('emojiPanel_'+idx);
+  const isOpen = panel.style.display === 'flex';
+  document.querySelectorAll('.emoji-panel').forEach(p => p.style.display = 'none');
+  panel.style.display = isOpen ? 'none' : 'flex';
+}
+function insertEmoji(idx, emoji){
+  const editable = document.getElementById('rteText_'+idx);
+  editable.focus();
+  restoreSelection(idx);
+  document.execCommand('insertText', false, emoji);
+  updateBlockField(idx, 'text', editable.innerHTML);
+  saveSelection(idx);
+}
+
 function updateBlockField(idx, field, value){
   state.blocks[idx][field] = value;
 }
