@@ -79,10 +79,10 @@
   }
   .block-text ul, .block-text ol{padding-left:24px; margin:8px 0;}
   .block-text li{margin-bottom:4px;}
-  .block-image{margin-bottom:16px;}
+  .block-image{margin-bottom:16px; text-align:center;}
   .block-image img{
-    width:100%; max-height:420px; object-fit:cover; border-radius:var(--radius);
-    border:1px solid var(--line); cursor:pointer; display:block;
+    width:auto; max-width:100%; max-height:600px; object-fit:contain; border-radius:var(--radius);
+    border:1px solid var(--line); cursor:pointer; display:inline-block;
   }
   .block-image .caption{font-size:13px; color:var(--ink-soft); margin-top:6px; text-align:center;}
   .block-video, .block-audio{margin-bottom:16px;}
@@ -392,7 +392,7 @@ async function renderCourseList(){
         <h2>${course.title}</h2>
         <p>${course.description || ''}</p>
         <div class="progress-bar"><div style="width:${pct}%"></div></div>
-        <div class="progress-label">${p.done} з ${p.total} кроків пройдено</div>
+        <div class="progress-label">${p.done} з ${p.total} уроків пройдено</div>
       </div>`;
   }
   app.innerHTML = html;
@@ -458,9 +458,9 @@ function renderLessonPage(){
     `<div class="block-text">${lesson.transcript_text || lesson.description || 'Контент буде додано пізніше.'}</div>`;
 
   app.innerHTML = `
-    <button class="back-link" onclick="renderLessonList()">← До списку кроків</button>
+    <button class="back-link" onclick="renderLessonList()">← До списку уроків</button>
     <div class="lesson-header">
-      <div class="eyebrow">Крок ${idx+1} з ${lessons.length}</div>
+      <div class="eyebrow">Урок ${idx+1} з ${lessons.length}</div>
       <h1>${lesson.title}</h1>
     </div>
     ${contentHtml}
