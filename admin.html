@@ -469,7 +469,7 @@ async function saveDepartment(){
   renderCourses();
 }
 async function deleteDepartment(){
-  if (!confirm('Видалити відділ і всі курси/кроки в ньому? Це незворотньо.')) return;
+  if (!confirm('Видалити відділ і всі курси/уроки в ньому? Це незворотньо.')) return;
   const { error } = await sb.from('departments').delete().eq('id', state.departmentId);
   if (error){ toast('Помилка видалення'); console.error(error); return; }
   toast('Відділ видалено');
@@ -495,11 +495,11 @@ async function openCourse(id){
   render();
 }
 
-// ---------- РІВЕНЬ 3: ВОРОНКА КРОКІВ (в межах курсу) ----------
+// ---------- РІВЕНЬ 3: ВОРОНКА УРОКІВ (в межах курсу) ----------
 
 async function loadLessons(courseId){
   const { data, error } = await sb.from('lessons').select('*').eq('course_id', courseId).order('order_index');
-  if (error){ toast('Помилка завантаження кроків'); console.error(error); return; }
+  if (error){ toast('Помилка завантаження уроків'); console.error(error); return; }
   state.lessons = data;
 }
 
@@ -531,7 +531,7 @@ async function renderCourse(){
 
     <div class="card">
       <label class="field-label">Копіювати цей курс в інший відділ</label>
-      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Скопіює курс разом з усіма кроками, блоками вмісту і завданнями — не треба вносити все заново.</p>
+      <p style="color:var(--ink-soft);font-size:13px;margin:0 0 10px;">Скопіює курс разом з усіма уроками, блоками вмісту і завданнями — не треба вносити все заново.</p>
       <select id="copyTargetDept">
         ${state.departments.filter(d => d.id !== state.departmentId).map(d => `<option value="${d.id}">${d.title}</option>`).join('')}
       </select>
@@ -540,7 +540,7 @@ async function renderCourse(){
     </div>
 
     <h2 class="section-title">Воронка навчання</h2>
-    <p style="color:var(--ink-soft);font-size:13px;margin-top:-6px;">Клікни на крок, щоб додати вміст у потрібному порядку</p>
+    <p style="color:var(--ink-soft);font-size:13px;margin-top:-6px;">Клікни на урок, щоб додати вміст у потрібному порядку</p>
     <div class="funnel">`;
 
   state.lessons.forEach((l, idx) => {
@@ -573,13 +573,13 @@ async function renderCourse(){
       ${state.lessons.length ? '<div class="funnel-arrow">→</div>' : ''}
       <div class="funnel-step funnel-step-add" onclick="showAddStep()">
         <div class="plus">+</div>
-        <div>Новий крок</div>
+        <div>Новий урок</div>
       </div>
     </div>
     <div class="add-form" id="addStepForm" style="display:none;">
-      <label class="field-label">Назва кроку воронки</label>
+      <label class="field-label">Назва уроку воронки</label>
       <input type="text" id="newLessonTitle" placeholder="Напр. Дзвінок клієнту" />
-      <button class="btn primary" onclick="createLesson()">+ Додати крок</button>
+      <button class="btn primary" onclick="createLesson()">+ Додати урок</button>
     </div>`;
   app.innerHTML = html;
 }
@@ -621,7 +621,7 @@ async function copyCourseToDepartment(){
     if (courseErr) throw courseErr;
     const newCourse = newCourseArr[0];
 
-    // 2. Копія всіх кроків курсу
+    // 2. Копія всіх уроків курсу
     const { data: lessons, error: lessonsErr } = await sb.from('lessons').select('*').eq('course_id', state.courseId).order('order_index');
     if (lessonsErr) throw lessonsErr;
 
@@ -640,7 +640,7 @@ async function copyCourseToDepartment(){
       if (lessonErr) throw lessonErr;
       const newLesson = newLessonArr[0];
 
-      // 3. Копія завдань цього кроку
+      // 3. Копія завдань цього уроку
       const { data: tasks, error: tasksErr } = await sb.from('lesson_tasks').select('*').eq('lesson_id', lesson.id).order('order_index');
       if (tasksErr) throw tasksErr;
       if (tasks && tasks.length){
@@ -671,7 +671,7 @@ async function saveCourse(){
   toast('Збережено');
 }
 async function deleteCourse(){
-  if (!confirm('Видалити курс і всі його кроки та завдання? Це незворотньо.')) return;
+  if (!confirm('Видалити курс і всі його уроки та завдання? Це незворотньо.')) return;
   const { error } = await sb.from('courses').delete().eq('id', state.courseId);
   if (error){ toast('Помилка видалення'); console.error(error); return; }
   toast('Курс видалено');
@@ -679,13 +679,13 @@ async function deleteCourse(){
 }
 async function createLesson(){
   const title = document.getElementById('newLessonTitle').value.trim();
-  if (!title) return toast('Введи назву кроку');
+  if (!title) return toast('Введи назву уроку');
   const order_index = state.lessons.length + 1;
   const { error } = await sb.from('lessons').insert({
     course_id: state.courseId, title, order_index, images: [], content_blocks: []
   });
-  if (error){ toast('Помилка створення кроку'); console.error(error); return; }
-  toast('Крок додано');
+  if (error){ toast('Помилка створення уроку'); console.error(error); return; }
+  toast('Урок додано');
   renderCourse();
 }
 function backToCourses(){
@@ -694,7 +694,7 @@ function backToCourses(){
   render();
 }
 
-// ---------- КРОК: РЕДАКТОР БЛОКІВ ----------
+// ---------- УРОК: РЕДАКТОР БЛОКІВ ----------
 
 async function loadTasks(lessonId){
   const { data, error } = await sb.from('lesson_tasks').select('*').eq('lesson_id', lessonId).order('order_index');
@@ -718,12 +718,12 @@ async function renderLesson(){
     <h1 class="page-title">${lesson.title}</h1>
 
     <div class="card">
-      <label class="field-label">Назва кроку</label>
+      <label class="field-label">Назва уроку</label>
       <input type="text" id="lessonTitle" value="${escAttr(lesson.title)}" />
       <button class="btn small" onclick="saveLessonTitle()">Зберегти назву</button>
     </div>
 
-    <h2 class="section-title">Вміст кроку</h2>
+    <h2 class="section-title">Вміст уроку</h2>
     <p style="color:var(--ink-soft);font-size:13px;margin-top:-6px;">Додавай блоки в потрібному порядку — текст, відео, фото, аудіо можна чергувати як завгодно</p>
 
     <div id="blocksContainer"></div>
@@ -737,8 +737,8 @@ async function renderLesson(){
     </div>
 
     <div class="row" style="margin-top:16px;">
-      <button class="btn primary" onclick="saveBlocks()">Зберегти вміст кроку</button>
-      <button class="btn danger small" onclick="deleteLesson()">Видалити крок</button>
+      <button class="btn primary" onclick="saveBlocks()">Зберегти вміст уроку</button>
+      <button class="btn danger small" onclick="deleteLesson()">Видалити урок</button>
     </div>
 
     <h2 class="section-title">Завдання (${state.tasks.length})</h2>`;
@@ -788,10 +788,10 @@ async function saveLessonTitle(){
   toast('Назву збережено');
 }
 async function deleteLesson(){
-  if (!confirm('Видалити крок і всі його завдання?')) return;
+  if (!confirm('Видалити урок і всі його завдання?')) return;
   const { error } = await sb.from('lessons').delete().eq('id', state.lessonId);
   if (error){ toast('Помилка видалення'); console.error(error); return; }
-  toast('Крок видалено');
+  toast('Урок видалено');
   backToCourse();
 }
 
@@ -1018,7 +1018,7 @@ async function uploadBlockFile(idx, inputEl, bucket){
 async function saveBlocks(){
   const { error } = await sb.from('lessons').update({ content_blocks: state.blocks }).eq('id', state.lessonId);
   if (error){ toast('Помилка збереження'); console.error(error); return; }
-  toast('Вміст кроку збережено');
+  toast('Вміст уроку збережено');
   renderCourse ? null : null; // no-op, залишаємось на сторінці
 }
 
@@ -1101,10 +1101,10 @@ async function renderProgress(){
         <div style="padding:10px 0;border-top:1px solid var(--line);">
           <div class="row" style="justify-content:space-between;">
             <div style="font-size:13px;font-weight:600;">${entry.course_title}</div>
-            <div style="font-size:12px;color:var(--ink-soft);">${entry.done} / ${total} кроків</div>
+            <div style="font-size:12px;color:var(--ink-soft);">${entry.done} / ${total} уроків</div>
           </div>
           <div class="progress-track"><div style="width:${pct}%"></div></div>
-          <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Останній крок: ${entry.lastLessonTitle || '—'} · ${when}</div>
+          <div style="font-size:12px;color:var(--ink-soft);margin-top:4px;">Останній урок: ${entry.lastLessonTitle || '—'} · ${when}</div>
         </div>`;
     });
     html += `</div>`;
