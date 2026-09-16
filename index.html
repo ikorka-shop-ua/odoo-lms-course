@@ -92,6 +92,10 @@
   }
   .block-file a:hover{border-color:var(--teal);}
   .block-quiz{margin-bottom:16px;}
+  .quiz-block-title{
+    font-size:16px; font-weight:700; color:var(--teal); margin:0 0 12px;
+    padding-bottom:8px; border-bottom:2px solid var(--line);
+  }
   .quiz-question{
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
     padding:20px; margin-bottom:12px;
@@ -296,6 +300,7 @@ function renderAudioBlock(url){
 function renderQuizBlock(b, lessonId){
   const results = state.quizResults[lessonId] || {};
   let html = '<div class="block-quiz">';
+  if (b.title) html += `<h3 class="quiz-block-title">${b.title}</h3>`;
   (b.questions||[]).forEach(q => {
     const result = results[q.id];
     const answered = !!result;
