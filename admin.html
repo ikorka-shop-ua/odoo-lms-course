@@ -904,7 +904,9 @@ function renderBlocks(){
         <input type="text" placeholder="Напр. Прайс-лист серпень 2026" value="${escAttr(b.caption||'')}" onchange="updateBlockField(${idx},'caption',this.value)" />`;
     }
     if (b.type === 'quiz'){
-      html += `<div id="quizContainer_${idx}">`;
+      html += `<label class="field-label">Тема блоку тестів (необов'язково)</label>
+        <input type="text" placeholder="Напр. Очікує відправки" value="${escAttr(b.title||'')}" onchange="updateBlockField(${idx},'title',this.value)" style="margin-bottom:14px;" />
+        <div id="quizContainer_${idx}">`;
       (b.questions||[]).forEach((q, qIdx) => {
         html += `<div class="quiz-question-block">
           <div class="row" style="justify-content:space-between;">
@@ -936,7 +938,7 @@ function renderBlocks(){
 
 function addBlock(type){
   const block = { id: uid(), type, text:'', url:'', caption:'' };
-  if (type === 'quiz') block.questions = [];
+  if (type === 'quiz'){ block.questions = []; block.title = ''; }
   state.blocks.push(block);
   renderBlocks();
 }
