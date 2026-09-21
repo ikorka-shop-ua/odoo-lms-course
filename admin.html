@@ -1137,9 +1137,11 @@ async function renderProgress(){
   }
 
   const byUser = {};
+  const userNames = {};
   progressRows.forEach(p => {
     const lesson = allLessons.find(l => l.id === p.lesson_id);
     if (!lesson) return;
+    if (p.user_name && !userNames[p.user_identifier]) userNames[p.user_identifier] = p.user_name;
     if (!byUser[p.user_identifier]) byUser[p.user_identifier] = {};
     if (!byUser[p.user_identifier][lesson.course_id]){
       byUser[p.user_identifier][lesson.course_id] = { course_id: lesson.course_id, course_title: lesson.course_title, done:0, lastActivity: null, lastLessonTitle: null };
@@ -1158,7 +1160,8 @@ async function renderProgress(){
 
   let html = `<h1 class="page-title">Прогрес команди</h1>`;
   Object.keys(byUser).sort().forEach(email => {
-    html += `<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:10px;">${email}</div>`;
+    const label = userNames[email] ? `${userNames[email]} <span style="font-weight:400;color:var(--ink-soft);">(${email})</span>` : email;
+    html += `<div class="card"><div style="font-weight:700;font-size:15px;margin-bottom:10px;">${label}</div>`;
     Object.values(byUser[email]).forEach(entry => {
       const total = totalsByCourseId[entry.course_id] || '?';
       const pct = total && total !== '?' ? Math.round(entry.done/total*100) : 0;
@@ -1203,7 +1206,9 @@ async function renderQuizResults(){
   });
 
   const deptUserPoints = {};
+  const userNames = {};
   (allResults||[]).forEach(r => {
+    if (r.user_name && !userNames[r.user_identifier]) userNames[r.user_identifier] = r.user_name;
     const deptId = lessonToDept[r.lesson_id];
     if (!deptId) return;
     if (!deptUserPoints[deptId]) deptUserPoints[deptId] = {};
@@ -1225,10 +1230,11 @@ async function renderQuizResults(){
       html += `<div class="card">`;
       Object.entries(users).sort((a,b)=>b[1]-a[1]).forEach(([email, pts]) => {
         const pct = maxP ? Math.round(pts/maxP*100) : 0;
+        const label = userNames[email] ? `${userNames[email]} <span style="font-weight:400;color:var(--ink-soft);">(${email})</span>` : email;
         html += `
           <div style="padding:10px 0;border-top:1px solid var(--line);">
             <div class="row" style="justify-content:space-between;">
-              <div style="font-size:13px;font-weight:600;">${email}</div>
+              <div style="font-size:13px;font-weight:600;">${label}</div>
               <div style="font-size:12px;color:var(--ink-soft);">${pts} / ${maxP} балів</div>
             </div>
             <div class="progress-track"><div style="width:${pct}%"></div></div>
