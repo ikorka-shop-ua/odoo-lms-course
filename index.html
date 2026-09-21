@@ -165,10 +165,11 @@ const app = document.getElementById('app');
 const userBar = document.getElementById('userBar');
 const userNameEl = document.getElementById('userName');
 
+const CANDIDATE_KEY = 'ikorka_lms_candidate';
+
 let state = {
   user: null,
-  session: null,
-  otpSentTo: null,
+  userName: null,
   departments: [],
   courses: {},
   lessons: {},
@@ -181,10 +182,11 @@ let state = {
   currentLessonIdx: 0
 };
 
-async function logout(){
-  await sb.auth.signOut();
-  state.user = null; state.session = null;
-  state.departments = []; state.progress = {}; state.taskDone = {};
+function logout(){
+  try { localStorage.removeItem(CANDIDATE_KEY); } catch(e){}
+  state.user = null; state.userName = null;
+  state.currentDepartment = null; state.currentCourse = null; state.currentLessonIdx = 0;
+  state.departments = []; state.progress = {}; state.taskDone = {}; state.quizResults = {};
   render();
 }
 
@@ -233,20 +235,20 @@ async function loadQuizResults(lessonId){
 async function markLessonDone(lessonId){
   state.progress[lessonId] = 'done';
   await sb.from('user_progress').upsert({
-    user_identifier: state.user, lesson_id: lessonId, status: 'done', completed_at: new Date().toISOString()
+    user_identifier: state.user, user_name: state.userName, lesson_id: lessonId, status: 'done', completed_at: new Date().toISOString()
   }, { onConflict: 'user_identifier,lesson_id' });
 }
 async function markLessonStarted(lessonId){
   if (state.progress[lessonId]) return;
   state.progress[lessonId] = 'in_progress';
   await sb.from('user_progress').upsert({
-    user_identifier: state.user, lesson_id: lessonId, status: 'in_progress', started_at: new Date().toISOString()
+    user_identifier: state.user, user_name: state.userName, lesson_id: lessonId, status: 'in_progress', started_at: new Date().toISOString()
   }, { onConflict: 'user_identifier,lesson_id' });
 }
 async function toggleTask(taskId, checked){
   state.taskDone[taskId] = checked;
   await sb.from('task_completion').upsert({
-    user_identifier: state.user, task_id: taskId, is_done: checked,
+    user_identifier: state.user, user_name: state.userName, task_id: taskId, is_done: checked,
     completed_at: checked ? new Date().toISOString() : null
   }, { onConflict: 'user_identifier,task_id' });
 }
@@ -254,6 +256,7 @@ async function selectQuizAnswer(lessonId, questionId, answerId, isCorrect, point
   const pointsEarned = isCorrect ? points : 0;
   await sb.from('quiz_results').upsert({
     user_identifier: state.user,
+    user_name: state.userName,
     lesson_id: lessonId,
     question_id: questionId,
     selected_answer_id: answerId,
@@ -343,8 +346,10 @@ function renderContentBlocks(blocks, lessonId){
 
 async function render(){
   if (!state.user){
-    const { data } = await sb.auth.getSession();
-    if (data.session){ state.session = data.session; state.user = data.session.user.email; }
+    try {
+      const saved = JSON.parse(localStorage.getItem(CANDIDATE_KEY) || 'null');
+      if (saved && saved.email){ state.user = saved.email; state.userName = saved.name || ''; }
+    } catch(e){}
   }
   if (!state.user){
     userBar.style.display = 'none';
@@ -352,7 +357,7 @@ async function render(){
     return;
   }
   userBar.style.display = 'flex';
-  userNameEl.textContent = state.user;
+  userNameEl.textContent = state.userName ? state.userName : state.user;
 
   if (!state.departments.length){
     app.innerHTML = '<div class="loading">Завантаження...</div>';
@@ -370,44 +375,28 @@ async function render(){
 }
 
 function renderLogin(){
-  if (state.otpSentTo){
-    app.innerHTML = `
-      <div class="login-wrap"><div class="login-card">
-        <h1>Перевір пошту</h1>
-        <p>Ми надіслали код на ${state.otpSentTo}. Введи його нижче.</p>
-        <input type="text" id="otpInput" placeholder="6-значний код" inputmode="numeric" />
-        <button onclick="doVerifyOtp()">Підтвердити</button>
-        <button style="background:none;color:var(--teal);margin-top:8px;font-weight:400;" onclick="resetLogin()">← Ввести інший email</button>
-      </div></div>`;
-    document.getElementById('otpInput').addEventListener('keydown', e => { if (e.key==='Enter') doVerifyOtp(); });
-    return;
-  }
   app.innerHTML = `
     <div class="login-wrap"><div class="login-card">
-      <h1>Курс новачка</h1>
-      <p>Введи свою пошту — надішлемо код для входу. Прогрес збережеться під нею.</p>
-      <input type="email" id="emailInput" placeholder="твоя@пошта.com" />
-      <button onclick="doSendOtp()">Отримати код</button>
+      <h1>Вхід у курс</h1>
+      <p>Введи своє ім'я та email. Це потрібно лише для того, щоб зберігати твій прогрес — код на пошту не надсилається.</p>
+      <input type="text" id="nameInput" placeholder="Повне ім'я" autocomplete="name" />
+      <input type="email" id="emailInput" placeholder="Email" autocomplete="email" />
+      <button onclick="doLogin()">Почати навчання →</button>
     </div></div>`;
-  document.getElementById('emailInput').addEventListener('keydown', e => { if (e.key==='Enter') doSendOtp(); });
+  const nameEl = document.getElementById('nameInput');
+  const emailEl = document.getElementById('emailInput');
+  nameEl.addEventListener('keydown', e => { if (e.key==='Enter') emailEl.focus(); });
+  emailEl.addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+  nameEl.focus();
 }
-function resetLogin(){ state.otpSentTo = null; render(); }
-async function doSendOtp(){
-  const email = document.getElementById('emailInput').value.trim();
-  if (!email) return;
-  const { error } = await sb.auth.signInWithOtp({ email });
-  if (error){ alert('Не вдалося надіслати код: ' + error.message); return; }
-  state.otpSentTo = email;
-  render();
-}
-async function doVerifyOtp(){
-  const token = document.getElementById('otpInput').value.trim();
-  if (!token) return;
-  const { data, error } = await sb.auth.verifyOtp({ email: state.otpSentTo, token, type: 'email' });
-  if (error){ alert('Невірний або прострочений код: ' + error.message); return; }
-  state.session = data.session;
-  state.user = data.user.email;
-  state.otpSentTo = null;
+function doLogin(){
+  const name = document.getElementById('nameInput').value.trim();
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  if (!name){ alert("Введи, будь ласка, своє ім'я."); return; }
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)){ alert('Введи коректний email.'); return; }
+  state.user = email;
+  state.userName = name;
+  try { localStorage.setItem(CANDIDATE_KEY, JSON.stringify({ name, email })); } catch(e){}
   render();
 }
 
